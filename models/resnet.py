@@ -643,12 +643,12 @@ def create_resnet(
     stage_temporal_stride: Tuple[int] = (1, 2, 2, 2),
     bottleneck: Union[Tuple[Callable], Callable] = create_bottleneck_block,
     # Head configs.
-    head: Callable = create_res_basic_head,
-    head_pool: Callable = nn.AvgPool3d,
-    head_pool_kernel_size: Tuple[int] = (7, 7, 7),
-    head_output_size: Tuple[int] = (1, 1, 1),
-    head_activation: Callable = None,
-    head_output_with_global_average: bool = True,
+    # head: Callable = create_res_basic_head,
+    # head_pool: Callable = nn.AvgPool3d,
+    # head_pool_kernel_size: Tuple[int] = (7, 7, 7),
+    # head_output_size: Tuple[int] = (1, 1, 1),
+    # head_activation: Callable = None,
+    # head_output_with_global_average: bool = True,
 ) -> nn.Module:
     """
     Build ResNet style models for video recognition. ResNet has three parts:
@@ -816,18 +816,18 @@ def create_resnet(
                     padding=(0, 0, 0),
                 )
             )
-    if head is not None:
-        head = head(
-            in_features=stage_dim_in,
-            out_features=model_num_class,
-            pool=head_pool,
-            output_size=head_output_size,
-            pool_kernel_size=head_pool_kernel_size,
-            dropout_rate=dropout_rate,
-            activation=head_activation,
-            output_with_global_average=head_output_with_global_average,
-        )
-        blocks.append(head)
+    # if head is not None:
+    #     head = head(
+    #         in_features=stage_dim_in,
+    #         out_features=model_num_class,
+    #         pool=head_pool,
+    #         output_size=head_output_size,
+    #         pool_kernel_size=head_pool_kernel_size,
+    #         dropout_rate=dropout_rate,
+    #         activation=head_activation,
+    #         output_with_global_average=head_output_with_global_average,
+    #     )
+    #     blocks.append(head)
     return Net(blocks=nn.ModuleList(blocks))
 
 
