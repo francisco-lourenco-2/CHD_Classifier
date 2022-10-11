@@ -6,6 +6,7 @@ import torch
 import torch.nn as nn
 from layers.convolutions import ConvReduce3D
 from layers.utils import set_attributes
+from util.misc import NestedTensor
 
 
 def create_res_basic_stem(

@@ -6,6 +6,8 @@ import torch
 import torch.nn as nn
 from layers.utils import set_attributes
 from models.weight_init import init_net_weights
+import torch.nn.functional as F
+from util.misc import NestedTensor
 
 
 class Net(nn.Module):
@@ -38,10 +40,13 @@ class Net(nn.Module):
         self.blocks = blocks
         init_net_weights(self)
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward(self, x: NestedTensor) -> NestedTensor:
+        x_tensors = x.tensors
+        m = x.mask
         for _, block in enumerate(self.blocks):
-            x = block(x)
-        return x
+            x_tensors = block(x_tensors)
+        mask = F.interpolate(m[None].float(), size=x.tensors.shape[-3:]).to(torch.bool)[0]
+        return NestedTensor(x_tensors, mask)
 
 
 class DetectionBBoxNetwork(nn.Module):

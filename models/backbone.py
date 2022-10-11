@@ -98,7 +98,7 @@ class Joiner(nn.Sequential):
         super().__init__(backbone, position_embedding)
 
     def forward(self, tensor_list: NestedTensor):
-        xs = self[0](tensor_list)
+        xs = {0: self[0](tensor_list)}
         out: List[NestedTensor] = []
         pos = []
         for name, x in xs.items():
