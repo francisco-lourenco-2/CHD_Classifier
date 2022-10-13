@@ -43,9 +43,11 @@ class Net(nn.Module):
     def forward(self, x: NestedTensor) -> NestedTensor:
         x_tensors = x.tensors
         m = x.mask
+
         for _, block in enumerate(self.blocks):
             x_tensors = block(x_tensors)
-        mask = F.interpolate(m[None].float(), size=x.tensors.shape[-3:]).to(torch.bool)[0]
+        mask = F.interpolate(m[None].float(), size=x_tensors.shape[-3:]).to(torch.bool)[0]
+        
         return NestedTensor(x_tensors, mask)
 
 
