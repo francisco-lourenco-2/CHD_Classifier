@@ -158,6 +158,7 @@ class MHAttentionMap(nn.Module):
     def forward(self, q, k, mask: Optional[Tensor] = None):
         q = self.q_linear(q)
         k = F.conv2d(k, self.k_linear.weight.unsqueeze(-1).unsqueeze(-1), self.k_linear.bias)
+        
         qh = q.view(q.shape[0], q.shape[1], self.num_heads, self.hidden_dim // self.num_heads)
         kh = k.view(k.shape[0], self.num_heads, self.hidden_dim // self.num_heads, k.shape[-2], k.shape[-1])
         weights = torch.einsum("bqnc,bnchw->bqnhw", qh * self.normalize_fact, kh)
