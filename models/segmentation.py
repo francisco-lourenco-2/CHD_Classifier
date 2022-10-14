@@ -55,6 +55,9 @@ class DETRsegm(nn.Module):
         # FIXME h_boxes takes the last one computed, keep this in mind
         bbox_mask = self.bbox_attention(hs[-1], memory, mask=mask)
 
+        print(features[0].tensors.shape)
+        input()
+
         seg_masks = self.mask_head(src_proj, bbox_mask, [features[2].tensors, features[1].tensors, features[0].tensors])
         outputs_seg_masks = seg_masks.view(bs, self.detr.num_queries, seg_masks.shape[-2], seg_masks.shape[-1])
 
@@ -160,12 +163,10 @@ class MHAttentionMap(nn.Module):
         
         k = F.conv3d(k, self.k_linear.weight.unsqueeze(-1).unsqueeze(-1).unsqueeze(-1), self.k_linear.bias)
 
-        print(k.shape, q.shape)        
-        input()
-
         qh = q.view(q.shape[0], q.shape[1], self.num_heads, self.hidden_dim // self.num_heads)
-        kh = k.view(k.shape[0], self.num_heads, self.hidden_dim // self.num_heads, k.shape[-2], k.shape[-1])
-        weights = torch.einsum("bqnc,bnchw->bqnhw", qh * self.normalize_fact, kh)
+        kh = k.view(k.shape[0], self.num_heads, self.hidden_dim // self.num_heads, k.shape[-3], k.shape[-2], k.shape[-1])
+
+        weights = torch.einsum("bqnc,bncdhw->bqndhw", qh * self.normalize_fact, kh)
 
         if mask is not None:
             weights.masked_fill_(mask.unsqueeze(1).unsqueeze(1), float("-inf"))
