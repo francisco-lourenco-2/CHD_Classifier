@@ -166,3 +166,9 @@ def detr_resnet101_panoptic(
     if return_postprocessor:
         return model, PostProcessPanoptic(is_thing_map, threshold=threshold)
     return model
+
+def detr_resnet3d_panoptic(num_classes=7):
+
+    model = _make_detr("resnet3d", dilation=False, num_classes=num_classes, mask=True)
+
+    return model

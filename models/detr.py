@@ -178,7 +178,7 @@ class SetCriterion(nn.Module):
         target_masks = target_masks[tgt_idx]
 
         # upsample predictions to the target size
-        src_masks = interpolate(src_masks[:, None], size=target_masks.shape[-2:],
+        src_masks = interpolate(src_masks[:, None], size=target_masks.shape[-3:],
                                 mode="bilinear", align_corners=False)
         src_masks = src_masks[:, 0].flatten(1)
 
