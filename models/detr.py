@@ -357,3 +357,59 @@ def build(args):
             postprocessors["panoptic"] = PostProcessPanoptic(is_thing_map, threshold=0.85)
 
     return model, criterion, postprocessors
+
+class LossSegmentation():
+    def __init__(self, matcher):
+        self.matcher = matcher
+        
+    def _get_src_permutation_idx(self, indices):
+        # permute predictions following indices
+        batch_idx = torch.cat([torch.full_like(src, i) for i, (src, _) in enumerate(indices)])
+        src_idx = torch.cat([src for (src, _) in indices])
+        return batch_idx, src_idx
+
+    def _get_tgt_permutation_idx(self, indices):
+        # permute targets following indices
+        batch_idx = torch.cat([torch.full_like(tgt, i) for i, (_, tgt) in enumerate(indices)])
+        tgt_idx = torch.cat([tgt for (_, tgt) in indices])
+        return batch_idx, tgt_idx
+
+    def loss_masks(self, outputs, targets):
+        """Compute the losses related to the masks: the focal loss and the dice loss.
+           targets dicts must contain the key "masks" containing a tensor of dim [nb_target_boxes, h, w]
+        """
+        outputs_without_aux = {k: v for k, v in outputs.items() if k != 'aux_outputs'}
+
+        # Retrieve the matching between the outputs of the last layer and the targets
+        indices = self.matcher(outputs_without_aux, targets)
+        num_boxes = sum(len(t["labels"]) for t in targets)
+        
+        num_boxes = torch.as_tensor([num_boxes], dtype=torch.float, device=next(iter(outputs.values())).device)
+        # if is_dist_avail_and_initialized():
+        #     torch.distributed.all_reduce(num_boxes)
+        num_boxes = torch.clamp(num_boxes / get_world_size(), min=1).item()
+
+        assert "pred_masks" in outputs
+
+        src_idx = self._get_src_permutation_idx(indices)
+        tgt_idx = self._get_tgt_permutation_idx(indices)
+        src_masks = outputs["pred_masks"]
+        src_masks = src_masks[src_idx]
+        masks = [t["masks"] for t in targets]
+        # TODO use valid to mask invalid areas due to padding in loss
+        target_masks, valid = nested_tensor_from_tensor_list(masks).decompose()
+        target_masks = target_masks.to(src_masks)
+        target_masks = target_masks[tgt_idx]
+
+        # upsample predictions to the target size
+        src_masks = interpolate(src_masks[:, None], size=target_masks.shape[-3:],
+                                mode="trilinear", align_corners=False)
+        src_masks = src_masks[:, 0].flatten(1)
+
+        target_masks = target_masks.flatten(1)
+        target_masks = target_masks.view(src_masks.shape)
+        losses = {
+            "loss_mask": sigmoid_focal_loss(src_masks, target_masks, num_boxes),
+            "loss_dice": dice_loss(src_masks, target_masks, num_boxes),
+        }
+        return losses

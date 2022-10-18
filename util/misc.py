@@ -316,11 +316,11 @@ def nested_tensor_from_tensor_list(tensor_list: List[Tensor]):
         max_size = _max_by_axis([list(img.shape) for img in tensor_list])
         # min_size = tuple(min(s) for s in zip(*[img.shape for img in tensor_list]))
         batch_shape = [len(tensor_list)] + max_size
-        b, c, d, h, w = batch_shape
+        b, c, h, w, d = batch_shape
         dtype = tensor_list[0].dtype
         device = tensor_list[0].device
         tensor = torch.zeros(batch_shape, dtype=dtype, device=device)
-        mask = torch.ones((b, d, h, w), dtype=torch.bool, device=device)
+        mask = torch.ones((b, h, w, d), dtype=torch.bool, device=device)
         for img, pad_img, m in zip(tensor_list, tensor, mask):
             pad_img[: img.shape[0], : img.shape[1], : img.shape[2], : img.shape[3]].copy_(img)
             m[: img.shape[1], :img.shape[2], :img.shape[3]] = False
