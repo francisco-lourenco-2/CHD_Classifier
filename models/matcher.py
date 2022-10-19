@@ -5,6 +5,7 @@ Modules to compute the matching cost and solve the corresponding LSAP.
 import torch
 from scipy.optimize import linear_sum_assignment
 from torch import nn
+import einops as ein
 
 from util.box_ops import box_cxcywh_to_xyxy, generalized_box_iou
 
@@ -68,7 +69,8 @@ class HungarianMatcher(nn.Module):
         cost_class = -out_prob[:, tgt_ids]
 
         # Compute the L1 cost between boxes
-        cost_bbox = torch.cdist(out_bbox, tgt_bbox, p=1)
+        # cost_bbox = torch.cdist(out_bbox, tgt_bbox, p=1)
+        cost_bbox = cdist(out_bbox, tgt_bbox)
 
         # Compute the giou cost betwen boxes
         cost_giou = -generalized_box_iou(box_cxcywh_to_xyxy(out_bbox), box_cxcywh_to_xyxy(tgt_bbox))
@@ -81,6 +83,12 @@ class HungarianMatcher(nn.Module):
         indices = [linear_sum_assignment(c[i]) for i, c in enumerate(C.split(sizes, -1))]
         return [(torch.as_tensor(i, dtype=torch.int64), torch.as_tensor(j, dtype=torch.int64)) for i, j in indices]
 
+def cdist(x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
+    if x.dtype is torch.float16 and x.is_cuda:
+        x = ein.rearrange(x, "l r-> l () r")
+        y = ein.rearrange(y, "l r-> () l r")
+        return (x - y).norm(dim=-1, p=1)
+    return torch.cdist(x, y, p=1)
 
 def build_matcher(args):
     return HungarianMatcher(cost_class=args.set_cost_class, cost_bbox=args.set_cost_bbox, cost_giou=args.set_cost_giou)
