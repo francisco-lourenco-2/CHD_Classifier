@@ -287,10 +287,10 @@ class PostProcessPanoptic(nn.Module):
             cur_scores = cur_scores[keep]
             cur_classes = cur_classes[keep]
             cur_masks = cur_masks[keep]
-            cur_masks = interpolate(cur_masks[:, None], to_tuple(size), mode="bilinear").squeeze(1)
+            cur_masks = interpolate(cur_masks[:, None], to_tuple(size), mode="trilinear").squeeze(1)
             cur_boxes = box_ops.box_cxcywh_to_xyxy(cur_boxes[keep])
 
-            h, w = cur_masks.shape[-2:]
+            h, w, d = cur_masks.shape[-3:]
             assert len(cur_boxes) == len(cur_classes)
 
             # It may be that we have several predicted masks for the same stuff class.
@@ -309,7 +309,7 @@ class PostProcessPanoptic(nn.Module):
 
                 if m_id.shape[-1] == 0:
                     # We didn't detect any mask :(
-                    m_id = torch.zeros((h, w), dtype=torch.long, device=m_id.device)
+                    m_id = torch.zeros((h, w, d), dtype=torch.long, device=m_id.device)
                 else:
                     m_id = m_id.argmax(-1).view(h, w)
 
@@ -320,47 +320,50 @@ class PostProcessPanoptic(nn.Module):
                             for eq_id in equiv:
                                 m_id.masked_fill_(m_id.eq(eq_id), equiv[0])
 
-                final_h, final_w = to_tuple(target_size)
+                final_h, final_w, final_d = to_tuple(target_size)
 
-                seg_img = Image.fromarray(id2rgb(m_id.view(h, w).cpu().numpy()))
-                seg_img = seg_img.resize(size=(final_w, final_h), resample=Image.NEAREST)
+                seg_img = m_id.view(h, w, d).cpu()
 
-                np_seg_img = (
-                    torch.ByteTensor(torch.ByteStorage.from_buffer(seg_img.tobytes())).view(final_h, final_w, 3).numpy()
-                )
-                m_id = torch.from_numpy(rgb2id(np_seg_img))
+                # seg_img = Image.fromarray(id2rgb(m_id.view(h, w, d).cpu().numpy()))
+                # seg_img = seg_img.resize(size=(final_w, final_h, final_d), resample=Image.NEAREST)
 
-                area = []
-                for i in range(len(scores)):
-                    area.append(m_id.eq(i).sum().item())
-                return area, seg_img
+                # np_seg_img = (
+                #     torch.ByteTensor(torch.ByteStorage.from_buffer(seg_img.tobytes())).view(final_h, final_w, final_d, 3).numpy()
+                # )
+                # m_id = torch.from_numpy(rgb2id(np_seg_img))
 
-            area, seg_img = get_ids_area(cur_masks, cur_scores, dedup=True)
-            if cur_classes.numel() > 0:
-                # We know filter empty masks as long as we find some
-                while True:
-                    filtered_small = torch.as_tensor(
-                        [area[i] <= 4 for i, c in enumerate(cur_classes)], dtype=torch.bool, device=keep.device
-                    )
-                    if filtered_small.any().item():
-                        cur_scores = cur_scores[~filtered_small]
-                        cur_classes = cur_classes[~filtered_small]
-                        cur_masks = cur_masks[~filtered_small]
-                        area, seg_img = get_ids_area(cur_masks, cur_scores)
-                    else:
-                        break
+                # area = []
+                # for i in range(len(scores)):
+                #     area.append(m_id.eq(i).sum().item())
+                return seg_img
 
-            else:
-                cur_classes = torch.ones(1, dtype=torch.long, device=cur_classes.device)
+            seg_img = get_ids_area(cur_masks, cur_scores, dedup=True)
+            preds = seg_img
+            # if cur_classes.numel() > 0:
+            #     # We know filter empty masks as long as we find some
+            #     while True:
+            #         filtered_small = torch.as_tensor(
+            #             [area[i] <= 4 for i, c in enumerate(cur_classes)], dtype=torch.bool, device=keep.device
+            #         )
+            #         if filtered_small.any().item():
+            #             cur_scores = cur_scores[~filtered_small]
+            #             cur_classes = cur_classes[~filtered_small]
+            #             cur_masks = cur_masks[~filtered_small]
+            #             area, seg_img = get_ids_area(cur_masks, cur_scores)
+            #         else:
+            #             break
 
-            segments_info = []
-            for i, a in enumerate(area):
-                cat = cur_classes[i].item()
-                segments_info.append({"id": i, "isthing": self.is_thing_map[cat], "category_id": cat, "area": a})
-            del cur_classes
+            # else:
+            #     cur_classes = torch.ones(1, dtype=torch.long, device=cur_classes.device)
 
-            with io.BytesIO() as out:
-                seg_img.save(out, format="PNG")
-                predictions = {"png_string": out.getvalue(), "segments_info": segments_info}
-            preds.append(predictions)
+            # segments_info = []
+            # for i, a in enumerate(area):
+            #     cat = cur_classes[i].item()
+            #     segments_info.append({"id": i, "isthing": self.is_thing_map[cat], "category_id": cat, "area": a})
+            # del cur_classes
+
+            # with io.BytesIO() as out:
+            #     seg_img.save(out, format="PNG")
+            #     predictions = {"png_string": out.getvalue(), "segments_info": segments_info}
+            # preds.append(predictions)
         return preds
