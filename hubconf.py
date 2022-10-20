@@ -10,14 +10,14 @@ from models.transformer import Transformer
 dependencies = ["torch", "torchvision"]
 
 
-def _make_detr(backbone_name: str, dilation=False, num_classes=91, mask=False):
+def _make_detr(backbone_name: str, dilation=False, num_classes=91, num_queries=10, mask=False):
     hidden_dim = 384
     backbone = Backbone(backbone_name, train_backbone=True, return_interm_layers=mask, dilation=dilation)
     pos_enc = PositionEmbeddingSine(hidden_dim // 3, normalize=True)
     backbone_with_pos_enc = Joiner(backbone, pos_enc)
     backbone_with_pos_enc.num_channels = backbone.num_channels
     transformer = Transformer(d_model=hidden_dim, return_intermediate_dec=True)
-    detr = DETR(backbone_with_pos_enc, transformer, num_classes=num_classes, num_queries=10)
+    detr = DETR(backbone_with_pos_enc, transformer, num_classes=num_classes, num_queries=num_queries)
     if mask:
         return DETRsegm(detr)
     return detr
@@ -167,8 +167,8 @@ def detr_resnet101_panoptic(
         return model, PostProcessPanoptic(is_thing_map, threshold=threshold)
     return model
 
-def detr_resnet3d_panoptic(num_classes=7):
+def detr_resnet3d_panoptic(num_classes=8,num_queries=8):
 
-    model = _make_detr("resnet3d", dilation=False, num_classes=num_classes, mask=True)
+    model = _make_detr("resnet3d", dilation=False, num_classes=num_classes, num_queries=num_queries, mask=True)
 
     return model
