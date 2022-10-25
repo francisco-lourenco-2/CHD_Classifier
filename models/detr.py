@@ -358,7 +358,7 @@ def build(args):
 
     return model, criterion, postprocessors
 
-class LossSegmentation():
+class LossCustom():
     def __init__(self, matcher):
         self.matcher = matcher
         
