@@ -599,7 +599,7 @@ _MODEL_STAGE_DEPTH = {50: (3, 4, 6, 3), 101: (3, 4, 23, 3), 152: (3, 8, 36, 3)}
 def create_resnet(
     *,
     # Input clip configs.
-    input_channel: int = 64,
+    input_channel: int = 1,#64,
     # Model configs.
     model_depth: int = 50,
     model_num_class: int = 400,

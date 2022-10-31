@@ -250,16 +250,16 @@ class ResNetBasicStem(nn.Module):
         set_attributes(self, locals())
         assert self.conv is not None
         # self.avg_pool = torch.nn.AvgPool3d(17,8,8)
-        self.conv_down_1 = torch.nn.Conv3d(1,8,5,2,2) 
-        self.conv_down_2 = torch.nn.Conv3d(8,16,5,2,2) 
-        self.conv_down_3 = torch.nn.Conv3d(16,32,5,2,2) 
-        self.conv_down_4 = torch.nn.Conv3d(32,64,5,2,2) 
+        # self.conv_down_1 = torch.nn.Conv3d(1,64,5,2,2) 
+        # self.conv_down_2 = torch.nn.Conv3d(32,64,5,2,2) 
+        # self.conv_down_3 = torch.nn.Conv3d(32,64,5,2,2) 
+        # self.conv_down_4 = torch.nn.Conv3d(32,64,5,2,2) 
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        x = self.conv_down_1(x)
-        x = self.conv_down_2(x)
-        x = self.conv_down_3(x)
-        x = self.conv_down_4(x)
+        # x = self.conv_down_1(x)
+        # x = self.conv_down_2(x)
+        # x = self.conv_down_3(x)
+        # x = self.conv_down_4(x)
         x = self.conv(x)
         if self.norm is not None:
             x = self.norm(x)
